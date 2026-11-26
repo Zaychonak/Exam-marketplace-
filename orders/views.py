@@ -26,6 +26,7 @@ class KarzinaListCreateView(generics.ListCreateAPIView):
             item.quantity += quantity
             item.save()
 
+        serializer.instance = item
 
 class KarzinaDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = KarzinaSerializer
@@ -34,7 +35,7 @@ class KarzinaDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Karzina.objects.filter(user=self.request.user)
 
-    
+   
 class CheckoutView(generics.CreateAPIView):
     serializer_class = ZakazSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -49,9 +50,9 @@ class CheckoutView(generics.CreateAPIView):
             ostatok = Ostatki_na_sklade.objects.filter(product=pro.product).first()
 
             if not ostatok or ostatok.quantity < pro.quantity:
-                return Response({'error': f'Its dont enought{pro.product.title}'},status=400)
-            
-            total_price += item.product.price * item.quantity
+                return Response({'error': f'Not enough {pro.product.title}'}, status=400)
+
+            total_price += pro.product.price * pro.quantity
 
         zakaz = Zakaz.objects.create(user=request.user, total_price=total_price)
 
@@ -66,16 +67,13 @@ class CheckoutView(generics.CreateAPIView):
             ostatok.quantity -= item.quantity
             ostatok.save()
 
-#ija redisay
         cart_items.delete()
         cache.clear()
 
-#ija celerya
         send_order_confirmation_email.delay(zakaz.id)
 
         serializer = self.get_serializer(zakaz)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
+        return Response(serializer.data, status=201)
 
 
 
@@ -86,6 +84,7 @@ class ZakazListView(generics.ListAPIView):
     def get_queryset(self):
         return (
             Zakaz.objects.filter(user=self.request.user).prefetch_related('items__product').select_related('oplata_zakaz').order_by('-created_at'))
+    
 
 
 class OplataCreateView(generics.CreateAPIView):
