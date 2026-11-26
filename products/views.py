@@ -70,21 +70,22 @@ class ProductListCreateView(generics.ListCreateAPIView):
 
         return queryset
 
-    @method_decorator(cache_page(60 * 5))
+    
     def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        cached_data = cache.get('products_list')
+        if cached_data is not None:
+            print('redis poshol vzyat dannie ot db')
+            return Response(cached_data)
+
+        print("vzyal")
+        response = super().list(request, *args, **kwargs)
+        cache.set('products_list', response.data, timeout=300)
+        return response
 
     def perform_create(self, serializer):
         serializer.save()
-        cache.clear() 
-
-    def perform_update(self, serializer):
-        serializer.save()
-        cache.clear() 
-
-    def perform_destroy(self, serializer):
-        serializer.delete()
-        cache.clear() 
+        cache.clear()
+        print('ochisteli redis')
 
 
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):

@@ -31,8 +31,10 @@ class KarzinaListCreateView(generics.ListCreateAPIView):
 class KarzinaDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = KarzinaSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Karzina.objects.none()
         return Karzina.objects.filter(user=self.request.user)
 
    
